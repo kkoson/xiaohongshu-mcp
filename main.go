@@ -1,37 +1,105 @@
 package main
 
 import (
-	"flag"
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
 	"os"
 
-	"github.com/sirupsen/logrus"
-	"github.com/xpzouying/xiaohongshu-mcp/configs"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+)
+
+const (
+	serverName    = "xiaohongshu-mcp"
+	serverVersion = "0.1.0"
 )
 
 func main() {
-	var (
-		headless bool
-		binPath  string // 浏览器二进制文件路径
-		port     string
+	// Initialize MCP server for Xiaohongshu (Little Red Book)
+	s := server.NewMCPServer(
+		serverName,
+		serverVersion,
+		server.WithToolCapabilities(true),
 	)
-	flag.BoolVar(&headless, "headless", true, "是否无头模式")
-	flag.StringVar(&binPath, "bin", "", "浏览器二进制文件路径")
-	flag.StringVar(&port, "port", ":18060", "端口")
-	flag.Parse()
 
-	if len(binPath) == 0 {
-		binPath = os.Getenv("ROD_BROWSER_BIN")
+	// Register search tool
+	searchTool := mcp.NewTool(
+		"xiaohongshu_search",
+		mcp.WithDescription("Search for notes/posts on Xiaohongshu (Little Red Book)"),
+		mcp.WithString(
+			"keyword",
+			mcp.Required(),
+			mcp.Description("The keyword to search for on Xiaohongshu"),
+		),
+		mcp.WithNumber(
+			"limit",
+			mcp.Description("Maximum number of results to return (default: 10)"),
+		),
+	)
+	s.AddTool(searchTool, searchHandler)
+
+	// Register get note detail tool
+	getNoteTool := mcp.NewTool(
+		"xiaohongshu_get_note",
+		mcp.WithDescription("Get detailed information about a specific Xiaohongshu note"),
+		mcp.WithString(
+			"note_id",
+			mcp.Required(),
+			mcp.Description("The ID of the Xiaohongshu note"),
+		),
+	)
+	s.AddTool(getNoteTool, getNoteHandler)
+
+	// Start stdio server
+	if err := server.ServeStdio(s); err != nil {
+		log.Fatalf("Server error: %v", err)
+		os.Exit(1)
+	}
+}
+
+// searchHandler handles the xiaohongshu_search tool call
+func searchHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	keyword, ok := req.Params.Arguments["keyword"].(string)
+	if !ok || keyword == "" {
+		return mcp.NewToolResultError("keyword is required and must be a string"), nil
 	}
 
-	configs.InitHeadless(headless)
-	configs.SetBinPath(binPath)
-
-	// 初始化服务
-	xiaohongshuService := NewXiaohongshuService()
-
-	// 创建并启动应用服务器
-	appServer := NewAppServer(xiaohongshuService)
-	if err := appServer.Start(port); err != nil {
-		logrus.Fatalf("failed to run server: %v", err)
+	limit := 10
+	if l, ok := req.Params.Arguments["limit"].(float64); ok && l > 0 {
+		limit = int(l)
 	}
+
+	results, err := searchXiaohongshu(ctx, keyword, limit)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("search failed: %v", err)), nil
+	}
+
+	data, err := json.MarshalIndent(results, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal results: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(string(data)), nil
+}
+
+// getNoteHandler handles the xiaohongshu_get_note tool call
+func getNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	noteID, ok := req.Params.Arguments["note_id"].(string)
+	if !ok || noteID == "" {
+		return mcp.NewToolResultError("note_id is required and must be a string"), nil
+	}
+
+	note, err := getNoteDetail(ctx, noteID)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to get note: %v", err)), nil
+	}
+
+	data, err := json.MarshalIndent(note, "", "  ")
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal note: %v", err)), nil
+	}
+
+	return mcp.NewToolResultText(string(data)), nil
 }
