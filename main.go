@@ -18,6 +18,9 @@ const (
 	// defaultSearchLimit is the default number of results returned by search.
 	// Increased from 10 to 20 for more comprehensive results.
 	defaultSearchLimit = 20
+
+	// maxSearchLimit caps the number of results to avoid overly large responses.
+	maxSearchLimit = 50
 )
 
 func main() {
@@ -39,7 +42,7 @@ func main() {
 		),
 		mcp.WithNumber(
 			"limit",
-			mcp.Description("Maximum number of results to return (default: 20)"),
+			mcp.Description(fmt.Sprintf("Maximum number of results to return (default: %d, max: %d)", defaultSearchLimit, maxSearchLimit)),
 		),
 	)
 	s.AddTool(searchTool, searchHandler)
@@ -73,6 +76,9 @@ func searchHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	limit := defaultSearchLimit
 	if l, ok := req.Params.Arguments["limit"].(float64); ok && l > 0 {
 		limit = int(l)
+		if limit > maxSearchLimit {
+			limit = maxSearchLimit
+		}
 	}
 
 	results, err := searchXiaohongshu(ctx, keyword, limit)
