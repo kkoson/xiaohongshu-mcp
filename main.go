@@ -16,8 +16,7 @@ const (
 	serverVersion = "0.1.0"
 
 	// defaultSearchLimit is the default number of results returned by search.
-	// Increased from 10 to 20 for more comprehensive results.
-	defaultSearchLimit = 20
+	defaultSearchLimit = 10
 
 	// maxSearchLimit caps the number of results to avoid overly large responses.
 	maxSearchLimit = 50
@@ -108,8 +107,4 @@ func getNoteHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTool
 
 	data, err := json.MarshalIndent(note, "", "  ")
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal note: %v", err)), nil
-	}
-
-	return mcp.NewToolResultText(string(data)), nil
-}
+		r
