@@ -14,7 +14,8 @@ const (
 	// defaultBaseURL is the base URL for the Xiaohongshu API.
 	defaultBaseURL = "https://www.xiaohongshu.com"
 	// defaultTimeout is the default HTTP client timeout.
-	defaultTimeout = 30 * time.Second
+	// Increased from 30s to 45s to better handle slow responses from the API.
+	defaultTimeout = 45 * time.Second
 	// defaultUserAgent mimics a browser to avoid bot detection.
 	defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
@@ -106,30 +107,4 @@ func (c *Client) doRequest(endpoint string, params url.Values) ([]byte, error) {
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
 	req.Header.Set("Referer", c.baseURL)
 	if c.cookies != "" {
-		req.Header.Set("Cookie", c.cookies)
-	}
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("executing request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading response body: %w", err)
-	}
-	return body, nil
-}
-
-// parseJSON is a helper to unmarshal JSON bytes into a target struct.
-func parseJSON(data []byte, target interface{}) error {
-	if err := json.Unmarshal(data, target); err != nil {
-		return fmt.Errorf("parsing JSON response: %w", err)
-	}
-	return nil
-}
+		r
