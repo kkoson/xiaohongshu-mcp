@@ -14,6 +14,10 @@ import (
 const (
 	serverName    = "xiaohongshu-mcp"
 	serverVersion = "0.1.0"
+
+	// defaultSearchLimit is the default number of results returned by search.
+	// Increased from 10 to 20 for more comprehensive results.
+	defaultSearchLimit = 20
 )
 
 func main() {
@@ -35,7 +39,7 @@ func main() {
 		),
 		mcp.WithNumber(
 			"limit",
-			mcp.Description("Maximum number of results to return (default: 10)"),
+			mcp.Description("Maximum number of results to return (default: 20)"),
 		),
 	)
 	s.AddTool(searchTool, searchHandler)
@@ -66,7 +70,7 @@ func searchHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 		return mcp.NewToolResultError("keyword is required and must be a string"), nil
 	}
 
-	limit := 10
+	limit := defaultSearchLimit
 	if l, ok := req.Params.Arguments["limit"].(float64); ok && l > 0 {
 		limit = int(l)
 	}
