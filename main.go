@@ -16,7 +16,8 @@ const (
 	serverVersion = "0.1.0"
 
 	// defaultSearchLimit is the default number of results returned by search.
-	defaultSearchLimit = 10
+	// Increased from 10 to 20 for more comprehensive results by default.
+	defaultSearchLimit = 20
 
 	// maxSearchLimit caps the number of results to avoid overly large responses.
 	maxSearchLimit = 50
