@@ -18,7 +18,8 @@ const (
 	// Personal note: 45s was still timing out occasionally on my network, bumping to 60s.
 	defaultTimeout = 60 * time.Second
 	// defaultUserAgent mimics a browser to avoid bot detection.
-	defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+	// Updated to Chrome 124 to match my current browser version.
+	defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 
 // Client is the HTTP client for the Xiaohongshu API.
@@ -76,6 +77,13 @@ func WithBaseURL(baseURL string) ClientOption {
 	}
 }
 
+// WithUserAgent overrides the default user agent string.
+func WithUserAgent(userAgent string) ClientOption {
+	return func(c *Client) {
+		c.userAgent = userAgent
+	}
+}
+
 // NewClient creates a new Xiaohongshu client with the given options.
 func NewClient(opts ...ClientOption) *Client {
 	c := &Client{
@@ -104,5 +112,4 @@ func (c *Client) doRequest(endpoint string, params url.Values) ([]byte, error) {
 	}
 
 	req.Header.Set("User-Agent", c.userAgent)
-	req.Header.Set("Accept", "application/json, text/plain, */*")
-	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.
+	req.Header.Set("Accept"
