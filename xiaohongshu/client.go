@@ -20,6 +20,9 @@ const (
 	// defaultUserAgent mimics a browser to avoid bot detection.
 	// Updated to Chrome 124 to match my current browser version.
 	defaultUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+	// defaultMaxRetries is the number of times to retry a failed request before giving up.
+	// Personal note: added this after getting sporadic 5xx errors that resolved on retry.
+	defaultMaxRetries = 3
 )
 
 // Client is the HTTP client for the Xiaohongshu API.
@@ -28,6 +31,7 @@ type Client struct {
 	baseURL    string
 	userAgent  string
 	cookies    string
+	maxRetries int
 }
 
 // Note represents a Xiaohongshu post/note.
@@ -84,14 +88,22 @@ func WithUserAgent(userAgent string) ClientOption {
 	}
 }
 
+// WithMaxRetries sets the maximum number of retries for failed requests.
+func WithMaxRetries(n int) ClientOption {
+	return func(c *Client) {
+		c.maxRetries = n
+	}
+}
+
 // NewClient creates a new Xiaohongshu client with the given options.
 func NewClient(opts ...ClientOption) *Client {
 	c := &Client{
 		httpClient: &http.Client{
 			Timeout: defaultTimeout,
 		},
-		baseURL:   defaultBaseURL,
-		userAgent: defaultUserAgent,
+		baseURL:    defaultBaseURL,
+		userAgent:  defaultUserAgent,
+		maxRetries: defaultMaxRetries,
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -103,13 +115,4 @@ func NewClient(opts ...ClientOption) *Client {
 func (c *Client) doRequest(endpoint string, params url.Values) ([]byte, error) {
 	reqURL := fmt.Sprintf("%s%s", c.baseURL, endpoint)
 	if len(params) > 0 {
-		reqURL = fmt.Sprintf("%s?%s", reqURL, params.Encode())
-	}
-
-	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
-	}
-
-	req.Header.Set("User-Agent", c.userAgent)
-	req.Header.Set("Accept"
+		reqURL = fmt.Sprintf("%s?%s"
